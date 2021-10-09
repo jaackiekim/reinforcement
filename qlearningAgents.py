@@ -42,7 +42,7 @@ class QLearningAgent(ReinforcementAgent):
         "You can initialize Q-values here..."
         ReinforcementAgent.__init__(self, **args)
 
-        "*** YOUR CODE HERE ***"
+        self.qvalues = {} 
 
     def getQValue(self, state, action):
         """
@@ -51,7 +51,13 @@ class QLearningAgent(ReinforcementAgent):
           or the Q node value otherwise
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+
+        if (state, action) not in self.qvalues: 
+          return 0.0 
+        else:
+          return self.qvalues[(state, action)]
+          
+        #util.raiseNotDefined()
 
 
     def computeValueFromQValues(self, state):
@@ -62,6 +68,14 @@ class QLearningAgent(ReinforcementAgent):
           terminal state, you should return a value of 0.0.
         """
         "*** YOUR CODE HERE ***"
+
+        actions = self.getLegalActions(state)
+        if len(actions) == 0: 
+            return 0.0
+
+        else: 
+          return max(self.getQValue(state, action) for action in actions)
+
         util.raiseNotDefined()
 
     def computeActionFromQValues(self, state):
@@ -71,7 +85,16 @@ class QLearningAgent(ReinforcementAgent):
           you should return None.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        #random.choice
+
+        current = self.getValue(state) 
+        actions = [action for action in self.getLegalActions(state) if self.getQValue(state, action) == current]
+        if len(actions) == 0: 
+          return None
+        else: 
+          return random.choice(actions)
+
+        #util.raiseNotDefined()
 
     def getAction(self, state):
         """
@@ -87,7 +110,9 @@ class QLearningAgent(ReinforcementAgent):
         # Pick Action
         legalActions = self.getLegalActions(state)
         action = None
-        "*** YOUR CODE HERE ***"
+        if len(legalActions) > 0 and flipCoin(self.epsilon): 
+          return random.choice(legalActions)
+        return self.computeActionFromQValues(state)
         util.raiseNotDefined()
 
         return action
@@ -102,7 +127,14 @@ class QLearningAgent(ReinforcementAgent):
           it will be called on your behalf
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        #find value = qvalue 
+        #sample = newvalue (function in computevaluefromqvalues)
+        #update q-value = (1-a)Q(s,a) + a*sample
+        #page 6 in note5
+
+        value = self.getQValue(state, action)
+        sample = self.computeValueFromQValues(nextState)
+        self.qvalues[(state, action)] = (1-self.alpha) * value + self.alpha * (reward + self.discount*sample)
 
     def getPolicy(self, state):
         return self.computeActionFromQValues(state)
@@ -138,6 +170,9 @@ class PacmanQAgent(QLearningAgent):
         informs parent of action for Pacman.  Do not change or remove this
         method.
         """
+        #random.choice
+        #util.FlipCoin(p)
+
         action = QLearningAgent.getAction(self,state)
         self.doAction(state,action)
         return action
@@ -165,6 +200,9 @@ class ApproximateQAgent(PacmanQAgent):
           where * is the dotProduct operator
         """
         "*** YOUR CODE HERE ***"
+        #
+        return self.featExtractor.getFeatures(state, action) * self.getWeights()
+
         util.raiseNotDefined()
 
     def update(self, state, action, nextState, reward):
@@ -172,6 +210,26 @@ class ApproximateQAgent(PacmanQAgent):
            Should update your weights based on transition
         """
         "*** YOUR CODE HERE ***"
+
+        weights = self.getWeights() 
+        features = self.featExtractor.getFeatures(state, action)
+
+        #calculating udpate
+        difference = reward + (self.discount * self.computeValueFromQValues(nextState)) - self.getQValue(state,action)
+        if len(weights) == 0: 
+          weights[(state,action)] == 0
+        for i in features.keys(): 
+          q = self.alpha * difference
+          features[i] = features[i] * q
+        weights += features
+        self.weights = weights.copy()
+
+
+#previous update code
+#        value = self.getQValue(state, action)
+#        sample = self.computeValueFromQValues(nextState)
+#        self.qvalues[(state, action)] = (1-self.alpha) * value + self.alpha * (reward + self.discount*sample)
+        
         util.raiseNotDefined()
 
     def final(self, state):
